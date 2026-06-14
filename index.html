@@ -3,22 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3U/M3U8 Player - Stream & Watch</title>
+    <title>StreamFlow - Premium Live M3U/M3U8 Player</title>
+    <meta name="description" content="Experience premium live streaming with StreamFlow. Watch live M3U/M3U8 channels in high definition with a modern glassmorphic interface, Theatre mode, and Fullscreen.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
+    <div class="glass-bg"></div>
+    <div class="glow-bubble bubble-1"></div>
+    <div class="glow-bubble bubble-2"></div>
+
+    <div class="container" id="appContainer">
         <!-- Header -->
         <header class="header">
             <div class="header-content">
                 <div class="logo">
-                    <i class="fas fa-play-circle"></i>
-                    <span>StreamFlow</span>
+                    <div class="logo-icon">
+                        <i class="fas fa-circle-play"></i>
+                    </div>
+                    <span>Stream<span class="gradient-text">Flow</span></span>
                 </div>
                 <div class="header-actions">
+                    <button class="btn-icon" id="themeToggleBtn" title="Toggle Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
                     <button class="btn-icon" id="settingsBtn" title="Settings">
-                        <i class="fas fa-cog"></i>
+                        <i class="fas fa-sliders"></i>
                     </button>
                 </div>
             </div>
@@ -26,100 +39,168 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Channels Section -->
-            <section class="channels-section">
-                <h2>Available Channels</h2>
-                <p>Preloaded with 3 fixed live stream links.</p>
-            </section>
+            <!-- App Grid -->
+            <div class="app-grid" id="appGrid">
+                <!-- Left: Player Column -->
+                <div class="player-column" id="playerSection">
+                    <!-- Player Card -->
+                    <div class="player-wrapper" id="playerWrapper">
+                        <div class="player-display" id="playerDisplay">
+                            <video id="videoPlayer" class="video-player" controlsList="nodownload"></video>
+                            <audio id="audioPlayer" class="audio-player"></audio>
+                            <iframe id="iframePlayer" class="video-player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen style="display: none;"></iframe>
+                            
+                            <!-- Custom HTML5 video controls overlay (shows on hover) -->
+                            <div class="player-overlay-gradient"></div>
 
-            <!-- Player Section -->
-            <section class="player-section" id="playerSection" style="display: none;">
-                <div class="player-container">
-                    <!-- Video/Audio Player -->
-                    <div class="player-display">
-                        <video id="videoPlayer" class="video-player" controlsList="nodownload"></video>
-                        <audio id="audioPlayer" class="audio-player"></audio>
-                        <div class="now-playing" id="nowPlaying">
-                            <div class="now-playing-content">
-                                <div class="track-thumbnail">
-                                    <i class="fas fa-music"></i>
+                            <!-- Live Badge Overlay (Top Left) -->
+                            <div class="live-indicator-overlay">
+                                <span class="live-dot"></span>
+                                <span class="live-text">LIVE</span>
+                            </div>
+
+                            <!-- Channel Title Overlay (Top Right) -->
+                            <div class="channel-title-overlay">
+                                <span id="nowPlayingTitleOverlay">TSN Live</span>
+                            </div>
+
+                            <!-- Play/Pause Big Center Button (shows on hover or when paused) -->
+                            <div class="center-play-overlay" id="centerPlayOverlay">
+                                <button class="center-play-btn" id="centerPlayBtn">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
+
+                            <!-- Loading Spinner -->
+                            <div class="spinner-overlay" id="spinnerOverlay" style="display: none;">
+                                <div class="premium-spinner"></div>
+                                <span class="spinner-text">Buffering Stream...</span>
+                            </div>
+
+                            <!-- Stream Error State -->
+                            <div class="error-overlay" id="errorOverlay" style="display: none;">
+                                <i class="fas fa-triangle-exclamation"></i>
+                                <h3>Stream Offline or Unplayable</h3>
+                                <p>Please select another channel or check your connection.</p>
+                                <button class="btn-secondary" id="retryStreamBtn">
+                                    <i class="fas fa-rotate"></i> Retry Connection
+                                </button>
+                            </div>
+                            
+                            <!-- Now Playing Audio View (Visible when audio track is active) -->
+                            <div class="now-playing" id="nowPlaying" style="display: none;">
+                                <div class="now-playing-content">
+                                    <div class="track-thumbnail">
+                                        <i class="fas fa-music"></i>
+                                    </div>
+                                    <div class="track-details">
+                                        <h3 id="nowPlayingTitle">No track selected</h3>
+                                        <p id="nowPlayingArtist">Select a track from the playlist</p>
+                                        <p id="nowPlayingDuration" class="duration" style="display: none;">00:00</p>
+                                    </div>
                                 </div>
-                                <div class="track-details">
-                                    <h3 id="nowPlayingTitle">No track selected</h3>
-                                    <p id="nowPlayingArtist">Select a track from the playlist</p>
-                                    <p id="nowPlayingDuration" class="duration">00:00</p>
+                            </div>
+                        </div>
+
+                        <!-- Player Controls Bar -->
+                        <div class="player-controls" id="playerControls">
+                            <div class="controls-left">
+                                <button class="btn-icon" id="prevBtn" title="Previous Channel">
+                                    <i class="fas fa-backward-step"></i>
+                                </button>
+                                <button class="btn-icon btn-play" id="playBtn" title="Play">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="btn-icon" id="nextBtn" title="Next Channel">
+                                    <i class="fas fa-forward-step"></i>
+                                </button>
+
+                                <div class="volume-control">
+                                    <button class="btn-icon" id="muteBtn" title="Mute/Unmute">
+                                        <i class="fas fa-volume-high"></i>
+                                    </button>
+                                    <div class="slider-container">
+                                        <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div class="controls-right">
+                                <div class="quality-control">
+                                    <i class="fas fa-sliders-h"></i>
+                                    <select id="qualitySelect">
+                                        <option value="auto">Auto Quality</option>
+                                    </select>
+                                </div>
+
+                                <button class="btn-icon" id="theatreBtn" title="Theatre Mode (T)">
+                                    <i class="fas fa-clapperboard" id="theatreIcon"></i>
+                                </button>
+                                <button class="btn-icon" id="fullscreenBtn" title="Fullscreen (F)">
+                                    <i class="fas fa-expand" id="fullscreenIcon"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Player Controls -->
-                    <div class="player-controls">
-                        <!-- Progress Bar -->
-                        <div class="progress-container">
-                            <span id="currentTime" class="time">00:00</span>
-                            <div class="progress-bar-wrapper">
-                                <div class="progress-bar" id="progressBar">
-                                    <div class="progress-fill" id="progressFill"></div>
-                                    <div class="progress-handle" id="progressHandle"></div>
+                    <!-- Stream Info Card -->
+                    <div class="stream-info-card">
+                        <div class="stream-meta">
+                            <div class="meta-main">
+                                <h2 id="streamNameDisplay">TSN Live</h2>
+                                <div class="meta-badges">
+                                    <span class="stream-category" id="streamCategoryDisplay">Sports Stream</span>
+                                    <span class="vpn-badge" id="vpnBadge" style="display: none;">
+                                        <i class="fas fa-shield-halved"></i> Brazil VPN Required
+                                    </span>
                                 </div>
                             </div>
-                            <span id="duration" class="time">00:00</span>
-                        </div>
-
-                        <!-- Control Buttons -->
-                        <div class="controls-buttons">
-                            <button class="btn-icon" id="shuffleBtn" title="Shuffle">
-                                <i class="fas fa-random"></i>
-                            </button>
-                            <button class="btn-icon" id="prevBtn" title="Previous">
-                                <i class="fas fa-step-backward"></i>
-                            </button>
-                            <button class="btn-icon btn-play" id="playBtn" title="Play">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button class="btn-icon" id="nextBtn" title="Next">
-                                <i class="fas fa-step-forward"></i>
-                            </button>
-                            <button class="btn-icon" id="repeatBtn" title="Repeat">
-                                <i class="fas fa-redo"></i>
-                            </button>
-                            <div class="quality-control">
-                                <label for="qualitySelect">Quality</label>
-                                <select id="qualitySelect">
-                                    <option value="auto">Auto</option>
-                                </select>
-                            </div>
-                            <div class="volume-control">
-                                <i class="fas fa-volume-down"></i>
-                                <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
-                                <i class="fas fa-volume-up"></i>
+                            <div class="stream-status-pill">
+                                <div class="pulse-dot green"></div>
+                                <span>Connected</span>
                             </div>
                         </div>
+                        <p class="stream-desc" id="streamDescDisplay">TSN Live Sports Streaming Channel. High quality digital broadcast.</p>
                     </div>
                 </div>
 
-                <!-- Playlist Section -->
-                <div class="playlist-section">
-                    <div class="playlist-header">
-                        <h2>Playlist</h2>
-                        <div class="playlist-actions">
-                            <input type="text" id="searchInput" placeholder="Search tracks..." class="search-input">
-                            <button class="btn-icon" id="resetPlaylistBtn" title="Reset Channels">
-                                <i class="fas fa-rotate"></i>
-                            </button>
+                <!-- Right: Playlist Column -->
+                <div class="playlist-column" id="playlistColumn">
+                    <div class="playlist-card">
+                        <div class="playlist-header">
+                            <div class="playlist-header-title">
+                                <h2>Live Channels</h2>
+                                <span class="badge" id="channelCountBadge">3 Channels</span>
+                            </div>
+                            <div class="playlist-search-row">
+                                <div class="search-box">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                    <input type="text" id="searchInput" placeholder="Search channels..." class="search-input">
+                                </div>
+                                <button class="btn-icon-square" id="resetPlaylistBtn" title="Reload Channels">
+                                    <i class="fas fa-rotate-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="playlist" id="playlist">
+                            <!-- Items dynamically populated -->
                         </div>
                     </div>
-                    <div class="playlist" id="playlist"></div>
                 </div>
-            </section>
+            </div>
 
             <!-- Empty State -->
             <section class="empty-state" id="emptyState" style="display: none;">
                 <div class="empty-content">
-                    <i class="fas fa-inbox"></i>
-                    <h2>No Channel Available</h2>
-                    <p>The fixed stream list could not be loaded.</p>
+                    <div class="empty-icon-container">
+                        <i class="fas fa-circle-exclamation"></i>
+                    </div>
+                    <h2>No Channels Available</h2>
+                    <p>The channel listing could not be loaded. Try resetting the playlist.</p>
+                    <button class="btn-primary" id="emptyResetBtn">
+                        <i class="fas fa-rotate"></i> Reload Channels
+                    </button>
                 </div>
             </section>
         </main>
@@ -127,30 +208,39 @@
 
     <!-- Settings Modal -->
     <div class="modal" id="settingsModal" style="display: none;">
+        <div class="modal-backdrop" id="modalBackdrop"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Settings</h2>
+                <h2>Player Settings</h2>
                 <button class="close-btn" id="closeSettings">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="setting-item">
-                    <label>Auto-play Next Track</label>
+                    <div class="setting-info">
+                        <label for="autoPlayToggle">Auto-play next stream</label>
+                        <span class="setting-desc">Switch to the next channel if loading fails</span>
+                    </div>
                     <div class="toggle-switch">
                         <input type="checkbox" id="autoPlayToggle" checked>
                         <span class="toggle-slider"></span>
                     </div>
                 </div>
+
                 <div class="setting-item">
-                    <label>Theme</label>
-                    <select id="themeSelect">
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
+                    <div class="setting-info">
+                        <label for="themeSelect">Color Theme</label>
+                        <span class="setting-desc">Toggle light or dark styling</span>
+                    </div>
+                    <select id="themeSelect" class="premium-select">
+                        <option value="dark">Dark Theme</option>
+                        <option value="light">Light Theme</option>
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- HLS library and Player logic -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js" integrity="sha384-9v3HcdYrO3D+OPDTjZ40RXocgE4GtXVCd3/mCS62JsM93JXgI1afJVuwjFvsu6ni" crossorigin="anonymous"></script>
     <script src="player.js"></script>
 </body>
