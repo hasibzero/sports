@@ -26,20 +26,10 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Upload Section -->
-            <section class="upload-section">
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-content">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <h2>Drop M3U/M3U8 File Here</h2>
-                        <p>or click to browse</p>
-                        <input type="file" id="fileInput" accept=".m3u,.m3u8" hidden>
-                    </div>
-                </div>
-                <div class="url-input-section">
-                    <input type="text" id="urlInput" placeholder="Or paste M3U/M3U8 URL here" class="url-input">
-                    <button class="btn-primary" id="loadUrlBtn">Load URL</button>
-                </div>
+            <!-- Channels Section -->
+            <section class="channels-section">
+                <h2>Available Channels</h2>
+                <p>Preloaded with 3 fixed live stream links.</p>
             </section>
 
             <!-- Player Section -->
@@ -94,6 +84,12 @@
                             <button class="btn-icon" id="repeatBtn" title="Repeat">
                                 <i class="fas fa-redo"></i>
                             </button>
+                            <div class="quality-control">
+                                <label for="qualitySelect">Quality</label>
+                                <select id="qualitySelect">
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </div>
                             <div class="volume-control">
                                 <i class="fas fa-volume-down"></i>
                                 <input type="range" id="volumeSlider" min="0" max="100" value="70" class="volume-slider">
@@ -109,8 +105,8 @@
                         <h2>Playlist</h2>
                         <div class="playlist-actions">
                             <input type="text" id="searchInput" placeholder="Search tracks..." class="search-input">
-                            <button class="btn-icon" id="clearPlaylistBtn" title="Clear Playlist">
-                                <i class="fas fa-trash"></i>
+                            <button class="btn-icon" id="clearPlaylistBtn" title="Reset Channels">
+                                <i class="fas fa-rotate"></i>
                             </button>
                         </div>
                     </div>
@@ -122,8 +118,8 @@
             <section class="empty-state" id="emptyState" style="display: none;">
                 <div class="empty-content">
                     <i class="fas fa-inbox"></i>
-                    <h2>No Playlist Loaded</h2>
-                    <p>Upload a M3U/M3U8 file or provide a URL to get started</p>
+                    <h2>No Channel Available</h2>
+                    <p>The fixed stream list could not be loaded.</p>
                 </div>
             </section>
         </main>
@@ -155,6 +151,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
     <script src="player.js"></script>
 </body>
 </html>
