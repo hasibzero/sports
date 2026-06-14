@@ -2,7 +2,7 @@ class M3UPlayer {
     constructor() {
         this.fixedChannels = [
             { title: 'TSN Live', url: 'https://ataide0.sandhost.dpdns.org/tsn.m3u8', duration: 0 },
-            { title: 'Stream 23', url: 'https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8', duration: 0 },
+            { title: 'Channel 23 Live', url: 'https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8', duration: 0 },
             { title: 'FOX Live', url: 'https://daffodil.sandhost.dpdns.org/fox.m3u8', duration: 0 }
         ];
 
@@ -44,7 +44,7 @@ class M3UPlayer {
 
         this.playlistEl = document.getElementById('playlist');
         this.searchInput = document.getElementById('searchInput');
-        this.clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+        this.resetPlaylistBtn = document.getElementById('resetPlaylistBtn');
 
         this.nowPlayingTitle = document.getElementById('nowPlayingTitle');
         this.nowPlayingArtist = document.getElementById('nowPlayingArtist');
@@ -71,7 +71,7 @@ class M3UPlayer {
         this.progressHandle.addEventListener('mousedown', (e) => this.startDrag(e));
 
         this.searchInput.addEventListener('input', (e) => this.filterPlaylist(e.target.value));
-        this.clearPlaylistBtn.addEventListener('click', () => this.resetPlaylist());
+        this.resetPlaylistBtn.addEventListener('click', () => this.resetPlaylist());
 
         this.settingsBtn.addEventListener('click', () => this.openSettings());
         this.closeSettings.addEventListener('click', () => this.closeSettingsModal());
@@ -88,6 +88,8 @@ class M3UPlayer {
             player.addEventListener('ended', () => this.onTrackEnded());
             player.addEventListener('loadedmetadata', () => this.updateDuration());
         });
+
+        this.videoPlayer.addEventListener('error', () => this.handleStreamError());
     }
 
     getCurrentPlayer() {
@@ -183,15 +185,10 @@ class M3UPlayer {
             this.hls.on(Hls.Events.ERROR, (_, data) => {
                 if (data?.fatal) {
                     console.error('HLS playback error:', data);
+                    this.handleStreamError();
                 }
             });
 
-            return;
-        }
-
-        if (this.videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-            this.videoPlayer.src = url;
-            this.setQualityControlState(false, ['Auto']);
             return;
         }
 
@@ -216,10 +213,15 @@ class M3UPlayer {
 
     setQualityControlState(enabled, options) {
         this.qualitySelect.innerHTML = '';
-        options.forEach((option, index) => {
+        const qualityOptions = options.map((label, index) => ({
+            value: index === 0 ? 'auto' : String(index - 1),
+            label
+        }));
+
+        qualityOptions.forEach((option) => {
             const item = document.createElement('option');
-            item.value = String(index === 0 ? 'auto' : index - 1);
-            item.textContent = option;
+            item.value = option.value;
+            item.textContent = option.label;
             this.qualitySelect.appendChild(item);
         });
         this.qualitySelect.value = 'auto';
@@ -365,6 +367,12 @@ class M3UPlayer {
         this.isPlaying = false;
         this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
         this.loadFixedChannels();
+    }
+
+    handleStreamError() {
+        if (this.playlist.length <= 1) return;
+        if (!this.autoPlay && this.repeatMode === 0) return;
+        this.nextTrack();
     }
 
     formatTime(seconds) {
