@@ -8,11 +8,10 @@ A beautiful, modern web-based player for M3U and M3U8 streaming playlists with a
 
 ## ✨ Features
 
-### 🎵 Playlist Support
-- Load and parse M3U/M3U8 playlist files
-- Upload files via drag & drop
-- Load playlists from URLs
-- Full metadata parsing (track names, durations)
+### 🎵 Fixed Channel Support
+- Preloaded with 3 fixed M3U8 live channels
+- No manual file upload or URL entry required
+- Fast channel switching from playlist panel
 
 ### 🎬 Playback Control
 - ⏯️ Play/Pause functionality
@@ -34,6 +33,7 @@ A beautiful, modern web-based player for M3U and M3U8 streaming playlists with a
 ### ⚙️ Advanced Features
 - 🌙 Dark/Light theme toggle
 - 💾 Local storage for settings
+- 🎚️ HLS quality selector (auto and available stream levels)
 - ⌨️ Keyboard shortcuts
   - `Space` - Play/Pause
   - `Arrow Right` - Next track
@@ -48,10 +48,8 @@ A beautiful, modern web-based player for M3U and M3U8 streaming playlists with a
 ### Usage
 
 1. **Open in Browser**: Simply open `index.html` in any modern web browser
-2. **Load Playlist**:
-   - **Upload File**: Click the upload area or drag & drop an M3U/M3U8 file
-   - **Load from URL**: Paste a playlist URL and click "Load URL"
-3. **Play**: Click a track from the playlist or use the play button
+2. **Choose Channel**: Select one of the 3 preloaded channels
+3. **Play**: Click the play button or change channels from the playlist
 4. **Control**: Use the player controls or keyboard shortcuts
 
 ### File Structure

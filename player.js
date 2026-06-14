@@ -1,24 +1,28 @@
 class M3UPlayer {
     constructor() {
+        this.fixedChannels = [
+            { title: 'TSN Live', url: 'https://ataide0.sandhost.dpdns.org/tsn.m3u8', duration: 0 },
+            { title: 'Channel 23 Live', url: 'https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8', duration: 0 },
+            { title: 'FOX Live', url: 'https://daffodil.sandhost.dpdns.org/fox.m3u8', duration: 0 }
+        ];
+
         this.playlist = [];
         this.currentIndex = 0;
         this.isPlaying = false;
         this.isShuffle = false;
         this.repeatMode = 0;
         this.autoPlay = true;
-        this.isVideo = false;
-        
+        this.isVideo = true;
+
+        this.hls = null;
+
         this.initElements();
         this.attachEventListeners();
         this.loadSettings();
+        this.loadFixedChannels();
     }
 
     initElements() {
-        this.uploadArea = document.getElementById('uploadArea');
-        this.fileInput = document.getElementById('fileInput');
-        this.urlInput = document.getElementById('urlInput');
-        this.loadUrlBtn = document.getElementById('loadUrlBtn');
-
         this.videoPlayer = document.getElementById('videoPlayer');
         this.audioPlayer = document.getElementById('audioPlayer');
         this.playerSection = document.getElementById('playerSection');
@@ -30,6 +34,7 @@ class M3UPlayer {
         this.shuffleBtn = document.getElementById('shuffleBtn');
         this.repeatBtn = document.getElementById('repeatBtn');
         this.volumeSlider = document.getElementById('volumeSlider');
+        this.qualitySelect = document.getElementById('qualitySelect');
 
         this.progressBar = document.getElementById('progressBar');
         this.progressFill = document.getElementById('progressFill');
@@ -39,7 +44,7 @@ class M3UPlayer {
 
         this.playlistEl = document.getElementById('playlist');
         this.searchInput = document.getElementById('searchInput');
-        this.clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+        this.resetPlaylistBtn = document.getElementById('resetPlaylistBtn');
 
         this.nowPlayingTitle = document.getElementById('nowPlayingTitle');
         this.nowPlayingArtist = document.getElementById('nowPlayingArtist');
@@ -54,42 +59,19 @@ class M3UPlayer {
     }
 
     attachEventListeners() {
-        this.uploadArea.addEventListener('click', () => this.fileInput.click());
-        this.uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            this.uploadArea.style.borderColor = 'var(--primary)';
-        });
-        this.uploadArea.addEventListener('dragleave', () => {
-            this.uploadArea.style.borderColor = 'rgba(99, 102, 241, 0.5)';
-        });
-        this.uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            this.uploadArea.style.borderColor = 'rgba(99, 102, 241, 0.5)';
-            if (e.dataTransfer.files.length > 0) {
-                this.loadFile(e.dataTransfer.files[0]);
-            }
-        });
-
-        this.fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                this.loadFile(e.target.files[0]);
-            }
-        });
-
-        this.loadUrlBtn.addEventListener('click', () => this.loadFromUrl());
-
         this.playBtn.addEventListener('click', () => this.togglePlay());
         this.prevBtn.addEventListener('click', () => this.previousTrack());
         this.nextBtn.addEventListener('click', () => this.nextTrack());
         this.shuffleBtn.addEventListener('click', () => this.toggleShuffle());
         this.repeatBtn.addEventListener('click', () => this.toggleRepeat());
-        this.volumeSlider.addEventListener('change', (e) => this.setVolume(e.target.value));
+        this.volumeSlider.addEventListener('input', (e) => this.setVolume(e.target.value));
+        this.qualitySelect.addEventListener('change', (e) => this.setQuality(e.target.value));
 
         this.progressBar.addEventListener('click', (e) => this.seek(e));
         this.progressHandle.addEventListener('mousedown', (e) => this.startDrag(e));
 
         this.searchInput.addEventListener('input', (e) => this.filterPlaylist(e.target.value));
-        this.clearPlaylistBtn.addEventListener('click', () => this.clearPlaylist());
+        this.resetPlaylistBtn.addEventListener('click', () => this.resetPlaylist());
 
         this.settingsBtn.addEventListener('click', () => this.openSettings());
         this.closeSettings.addEventListener('click', () => this.closeSettingsModal());
@@ -101,67 +83,22 @@ class M3UPlayer {
 
         document.addEventListener('keydown', (e) => this.handleKeyboard(e));
 
-        this.getCurrentPlayer().addEventListener('timeupdate', () => this.updateProgress());
-        this.getCurrentPlayer().addEventListener('ended', () => this.onTrackEnded());
-        this.getCurrentPlayer().addEventListener('loadedmetadata', () => this.updateDuration());
+        [this.videoPlayer, this.audioPlayer].forEach((player) => {
+            player.addEventListener('timeupdate', () => this.updateProgress());
+            player.addEventListener('ended', () => this.onTrackEnded());
+            player.addEventListener('loadedmetadata', () => this.updateDuration());
+        });
+
+        this.videoPlayer.addEventListener('error', () => this.handleStreamError());
     }
 
     getCurrentPlayer() {
         return this.isVideo ? this.videoPlayer : this.audioPlayer;
     }
 
-    async loadFile(file) {
-        try {
-            const text = await file.text();
-            this.parseM3U(text);
-            this.updateUI();
-        } catch (error) {
-            console.error('Error loading file:', error);
-            alert('Error loading file. Please check the format.');
-        }
-    }
-
-    async loadFromUrl() {
-        const url = this.urlInput.value.trim();
-        if (!url) {
-            alert('Please enter a valid URL');
-            return;
-        }
-
-        try {
-            const response = await fetch(url);
-            const text = await response.text();
-            this.parseM3U(text);
-            this.updateUI();
-            this.urlInput.value = '';
-        } catch (error) {
-            console.error('Error loading from URL:', error);
-            alert('Error loading playlist from URL. Make sure the URL is correct.');
-        }
-    }
-
-    parseM3U(text) {
-        this.playlist = [];
-        const lines = text.split('\n');
-        let currentTrack = { title: '', url: '', duration: 0 };
-
-        for (let line of lines) {
-            line = line.trim();
-
-            if (line.startsWith('#EXTINF')) {
-                const match = line.match(/#EXTINF:(-?\d+),(.+)/);
-                if (match) {
-                    currentTrack.duration = parseInt(match[1]);
-                    currentTrack.title = match[2].trim() || 'Unknown Track';
-                }
-            } else if (line && !line.startsWith('#') && line.length > 0) {
-                currentTrack.url = line;
-                if (currentTrack.url) {
-                    this.playlist.push({ ...currentTrack });
-                    currentTrack = { title: '', url: '', duration: 0 };
-                }
-            }
-        }
+    loadFixedChannels() {
+        this.playlist = this.fixedChannels.map((channel) => ({ ...channel }));
+        this.updateUI();
     }
 
     updateUI() {
@@ -187,7 +124,7 @@ class M3UPlayer {
                 <span class="playlist-item-index">${index + 1}</span>
                 <div class="playlist-item-info">
                     <div class="playlist-item-title">${track.title}</div>
-                    <div class="playlist-item-duration">${this.formatTime(track.duration)}</div>
+                    <div class="playlist-item-duration">${this.formatTime(track.duration || 0)}</div>
                 </div>
                 <i class="fas fa-play playlist-item-play"></i>
             `;
@@ -201,24 +138,106 @@ class M3UPlayer {
 
         this.currentIndex = index;
         const track = this.playlist[index];
-        const player = this.getCurrentPlayer();
+        const isHlsStream = /\.m3u8($|\?)/i.test(track.url);
 
-        this.isVideo = /\.(m3u8|mp4|webm|mov)$/i.test(track.url);
+        this.teardownHls();
+        this.videoPlayer.pause();
+        this.audioPlayer.pause();
 
-        player.src = track.url;
+        this.isVideo = true;
+        this.videoPlayer.style.display = 'block';
+        this.audioPlayer.style.display = 'none';
+
+        if (isHlsStream) {
+            this.setupHls(track.url);
+        } else {
+            this.videoPlayer.src = track.url;
+            this.setQualityControlState(false, ['Auto']);
+        }
+
         this.updateNowPlaying();
         this.renderPlaylist();
 
         if (this.isPlaying) {
-            player.play();
+            this.safePlay(this.getCurrentPlayer());
         }
+    }
+
+    setupHls(url) {
+        if (window.Hls && Hls.isSupported()) {
+            this.hls = new Hls({
+                capLevelToPlayerSize: true,
+                startLevel: -1,
+                maxBufferLength: 30
+            });
+
+            this.hls.loadSource(url);
+            this.hls.attachMedia(this.videoPlayer);
+
+            this.hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+                const labels = ['Auto', ...this.getQualityLabels(data.levels || [])];
+                this.setQualityControlState(true, labels);
+                if (this.isPlaying) {
+                    this.safePlay(this.videoPlayer);
+                }
+            });
+
+            this.hls.on(Hls.Events.ERROR, (_, data) => {
+                if (data?.fatal) {
+                    console.error('HLS playback error:', data);
+                    this.handleStreamError();
+                }
+            });
+
+            return;
+        }
+
+        this.videoPlayer.src = url;
+        this.setQualityControlState(false, ['Auto']);
+    }
+
+    teardownHls() {
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
+    }
+
+    getQualityLabels(levels) {
+        return levels.map((level, index) => {
+            if (level.height) return `${level.height}p`;
+            if (level.bitrate) return `${Math.round(level.bitrate / 1000)} kbps`;
+            return `Level ${index + 1}`;
+        });
+    }
+
+    setQualityControlState(enabled, options) {
+        this.qualitySelect.innerHTML = '';
+        const qualityOptions = options.map((label, index) => ({
+            value: index === 0 ? 'auto' : String(index - 1),
+            label
+        }));
+
+        qualityOptions.forEach((option) => {
+            const item = document.createElement('option');
+            item.value = option.value;
+            item.textContent = option.label;
+            this.qualitySelect.appendChild(item);
+        });
+        this.qualitySelect.value = 'auto';
+        this.qualitySelect.disabled = !enabled;
+    }
+
+    setQuality(value) {
+        if (!this.hls) return;
+        this.hls.currentLevel = value === 'auto' ? -1 : Number(value);
     }
 
     updateNowPlaying() {
         const track = this.playlist[this.currentIndex];
         this.nowPlayingTitle.textContent = track.title;
         this.nowPlayingArtist.textContent = track.url;
-        this.nowPlayingDuration.textContent = this.formatTime(track.duration);
+        this.nowPlayingDuration.textContent = this.formatTime(track.duration || 0);
     }
 
     togglePlay() {
@@ -228,30 +247,37 @@ class M3UPlayer {
             this.isPlaying = false;
             this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
         } else {
-            player.play();
+            this.safePlay(player);
             this.isPlaying = true;
             this.playBtn.innerHTML = '<i class="fas fa-pause"></i>';
         }
     }
 
+    safePlay(player) {
+        const playPromise = player.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch((error) => {
+                console.error('Playback error:', error);
+                this.isPlaying = false;
+                this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            });
+        }
+    }
+
     nextTrack() {
+        if (this.playlist.length === 0) return;
         if (this.isShuffle) {
             this.currentIndex = Math.floor(Math.random() * this.playlist.length);
         } else {
             this.currentIndex = (this.currentIndex + 1) % this.playlist.length;
         }
         this.loadTrack(this.currentIndex);
-        if (this.isPlaying) {
-            this.getCurrentPlayer().play();
-        }
     }
 
     previousTrack() {
+        if (this.playlist.length === 0) return;
         this.currentIndex = (this.currentIndex - 1 + this.playlist.length) % this.playlist.length;
         this.loadTrack(this.currentIndex);
-        if (this.isPlaying) {
-            this.getCurrentPlayer().play();
-        }
     }
 
     toggleShuffle() {
@@ -262,35 +288,37 @@ class M3UPlayer {
     toggleRepeat() {
         this.repeatMode = (this.repeatMode + 1) % 3;
         this.repeatBtn.classList.toggle('active', this.repeatMode > 0);
-        if (this.repeatMode === 2) {
-            this.repeatBtn.innerHTML = '<i class="fas fa-redo"></i> <span>1</span>';
-        } else {
-            this.repeatBtn.innerHTML = '<i class="fas fa-redo"></i>';
-        }
+        this.repeatBtn.innerHTML = this.repeatMode === 2
+            ? '<i class="fas fa-redo"></i> <span>1</span>'
+            : '<i class="fas fa-redo"></i>';
     }
 
     onTrackEnded() {
         if (this.repeatMode === 2) {
             this.loadTrack(this.currentIndex);
-            this.getCurrentPlayer().play();
+            this.safePlay(this.getCurrentPlayer());
         } else if (this.repeatMode === 1 || this.autoPlay) {
             this.nextTrack();
         }
     }
 
     setVolume(value) {
-        const player = this.getCurrentPlayer();
-        player.volume = value / 100;
+        this.getCurrentPlayer().volume = value / 100;
     }
 
     updateProgress() {
         const player = this.getCurrentPlayer();
-        if (player.duration) {
+        if (player.duration && Number.isFinite(player.duration)) {
             const percent = (player.currentTime / player.duration) * 100;
-            this.progressFill.style.width = percent + '%';
-            this.progressHandle.style.left = percent + '%';
+            this.progressFill.style.width = `${percent}%`;
+            this.progressHandle.style.left = `${percent}%`;
             this.currentTimeEl.textContent = this.formatTime(player.currentTime);
+            return;
         }
+
+        this.progressFill.style.width = '0%';
+        this.progressHandle.style.left = '0%';
+        this.currentTimeEl.textContent = this.formatTime(player.currentTime || 0);
     }
 
     updateDuration() {
@@ -299,18 +327,21 @@ class M3UPlayer {
     }
 
     seek(e) {
-        const rect = this.progressBar.getBoundingClientRect();
-        const percent = (e.clientX - rect.left) / rect.width;
         const player = this.getCurrentPlayer();
+        if (!player.duration || !Number.isFinite(player.duration)) return;
+        const rect = this.progressBar.getBoundingClientRect();
+        const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         player.currentTime = percent * player.duration;
     }
 
     startDrag(e) {
         e.preventDefault();
-        const onMouseMove = (e) => {
+        const player = this.getCurrentPlayer();
+        if (!player.duration || !Number.isFinite(player.duration)) return;
+
+        const onMouseMove = (event) => {
             const rect = this.progressBar.getBoundingClientRect();
-            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const player = this.getCurrentPlayer();
+            const percent = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
             player.currentTime = percent * player.duration;
         };
 
@@ -325,31 +356,35 @@ class M3UPlayer {
 
     filterPlaylist(query) {
         const items = document.querySelectorAll('.playlist-item');
-        items.forEach(item => {
+        items.forEach((item) => {
             const title = item.querySelector('.playlist-item-title').textContent;
             item.style.display = title.toLowerCase().includes(query.toLowerCase()) ? 'flex' : 'none';
         });
     }
 
-    clearPlaylist() {
-        if (confirm('Are you sure you want to clear the playlist?')) {
-            this.playlist = [];
-            this.currentIndex = 0;
-            this.isPlaying = false;
-            this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
-            this.updateUI();
-        }
+    resetPlaylist() {
+        this.searchInput.value = '';
+        this.isPlaying = false;
+        this.playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        this.loadFixedChannels();
+    }
+
+    handleStreamError() {
+        if (this.playlist.length <= 1) return;
+        if (!this.autoPlay && this.repeatMode === 0) return;
+        this.nextTrack();
     }
 
     formatTime(seconds) {
-        if (isNaN(seconds)) return '00:00';
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
+        if (!Number.isFinite(seconds)) return 'LIVE';
+        const safeSeconds = Math.max(0, seconds);
+        const mins = Math.floor(safeSeconds / 60);
+        const secs = Math.floor(safeSeconds % 60);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
     handleKeyboard(e) {
-        if (e.target === this.searchInput || e.target === this.urlInput) return;
+        if (e.target === this.searchInput) return;
 
         switch (e.code) {
             case 'Space':
@@ -361,6 +396,8 @@ class M3UPlayer {
                 break;
             case 'ArrowLeft':
                 this.previousTrack();
+                break;
+            default:
                 break;
         }
     }
@@ -389,12 +426,12 @@ class M3UPlayer {
     loadSettings() {
         const savedTheme = localStorage.getItem('theme') || 'dark';
         const savedAutoPlay = localStorage.getItem('autoPlay') !== 'false';
-        
+
         this.themeSelect.value = savedTheme;
         this.autoPlayToggle.checked = savedAutoPlay;
         this.autoPlay = savedAutoPlay;
-        
         this.setTheme(savedTheme);
+        this.setVolume(this.volumeSlider.value);
     }
 }
 
